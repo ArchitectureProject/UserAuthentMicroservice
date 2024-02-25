@@ -7,6 +7,8 @@ import com.efrei.usermicroservice.model.AppUser;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwk.JsonWebKeySet;
+import org.jose4j.jwk.PublicJsonWebKey;
 import org.jose4j.jwk.RsaJsonWebKey;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
@@ -88,6 +90,18 @@ public class JWTUtils {
                 throw new ExpiredJWTException("JWT expiré, essayez d'en avoir un nouveau en vous logguant à nouveau");
             }
             throw new JWTException("JWT invalide, essayez de vous logguer à nouveau", e);
+        }
+    }
+
+    public String createJwks() {
+        try {
+            RSAPublicKey publicKey = getRSAPublicKeyFromPEM(publicKeyFile);
+            PublicJsonWebKey publicJwk = PublicJsonWebKey.Factory.newPublicJwk(publicKey);
+            publicJwk.setKeyId("k1");
+            JsonWebKeySet jwks = new JsonWebKeySet(publicJwk);
+            return jwks.toJson();
+        } catch (Exception e) {
+            throw new JWTException("Erreur lors de la création du JWKS", e);
         }
     }
 

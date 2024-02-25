@@ -1,5 +1,6 @@
 package com.efrei.usermicroservice.service;
 
+import com.efrei.usermicroservice.exceptions.custom.EmailAlreadyExistingException;
 import com.efrei.usermicroservice.exceptions.custom.IncorrectPasswordException;
 import com.efrei.usermicroservice.exceptions.custom.UserMicroserviceException;
 import com.efrei.usermicroservice.exceptions.custom.UserNotFoundException;
@@ -26,23 +27,30 @@ public class UserServiceImpl implements UserService{
         this.jwtUtils = jwtUtils;
     }
 
+    @Override
     public AppUser createUser(UserToCreate userToCreate){
+        userRepository.findByEmail(userToCreate.email()).ifPresent(user -> {
+            throw new EmailAlreadyExistingException("Un utilisateur avec cette adresse email existe déjà.");
+        });
+
         AppUser appUser = mapUserToCreateIntoUser(userToCreate);
         return userRepository.save(appUser);
     }
 
+    @Override
     public AppUser getUserById(String bearerToken, String userId){
         jwtUtils.validateJwt(bearerToken.substring(7));
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
     }
 
+    @Override
     public List<AppUser> getAllUser(String bearerToken){
         jwtUtils.validateJwt(bearerToken.substring(7));
         return userRepository.findAll();
     }
 
-
+    @Override
     public LoginResponse login(LoginAttempt loginAttempt){
         AppUser appUser =  userRepository.findByEmail(loginAttempt.email())
                 .orElseThrow(() -> new UserNotFoundException("User not found with email: " + loginAttempt.email()));
@@ -52,6 +60,33 @@ public class UserServiceImpl implements UserService{
         }
 
         return new LoginResponse(jwtUtils.createJWT(appUser));
+    }
+
+    @Override
+    public AppUser modifyUser(String bearerToken, String userId, UserToCreate userToCreate) {
+        jwtUtils.validateJwt(bearerToken.substring(7));
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+
+        userRepository.findByEmail(userToCreate.email()).ifPresent(user -> {
+            throw new EmailAlreadyExistingException("Un utilisateur avec cette adresse email existe déjà.");
+        });
+
+        AppUser appUser = mapUserToCreateIntoUser(userToCreate);
+        appUser.setId(userId);
+
+        return userRepository.save(appUser);
+    }
+
+    @Override
+    public void deleteUser(String bearerToken, String userId) {
+        jwtUtils.validateJwt(bearerToken.substring(7));
+
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
+
+        userRepository.deleteById(userId);
     }
 
     private boolean isAttemptedPasswordCorrect(String attemptedPassword, String hashedDbPassword){

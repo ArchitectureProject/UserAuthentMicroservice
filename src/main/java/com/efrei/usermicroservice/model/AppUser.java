@@ -21,6 +21,10 @@ public class AppUser {
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public UserRole getUserRole() {
         return userRole;
     }

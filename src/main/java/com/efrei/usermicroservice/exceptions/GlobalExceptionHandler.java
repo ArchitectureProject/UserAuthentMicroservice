@@ -44,12 +44,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 
-    @ExceptionHandler(ExpiredJWTException.class)
-    protected ResponseEntity<Object> handleUserMicroserviceException(
-            ExpiredJWTException ex, WebRequest request) {
+    @ExceptionHandler(EmailAlreadyExistingException.class)
+    protected ResponseEntity<Object> handleSameEmailAddress(
+            EmailAlreadyExistingException ex, WebRequest request) {
         String bodyOfResponse = ex.getMessage();
         return handleExceptionInternal(ex, bodyOfResponse,
-                new HttpHeaders(), HttpStatus.UNAUTHORIZED, request);
+                new HttpHeaders(), HttpStatus.CONFLICT, request);
     }
+
 
 }
