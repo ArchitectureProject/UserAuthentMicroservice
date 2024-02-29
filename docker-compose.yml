@@ -8,13 +8,19 @@ services:
       POSTGRES_DB: userdb
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
     networks:
-      - my-network
+      - app-network
 
-  myapp:
+  usermicroservice:
     build: .
     depends_on:
-      - authpostgres
+      authpostgres:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://authpostgres:5432/userdb
       SPRING_DATASOURCE_USERNAME: admin_user
@@ -22,8 +28,41 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - my-network
+      - app-network
+    command: [ "dockerize", "-wait", "tcp://authpostgres:5432", "-timeout", "30s", "java", "-jar", "/app.jar" ]
+
+  catalogpostgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: strongPassword
+      POSTGRES_USER: admin_user
+      POSTGRES_DB: catalog
+    ports:
+      - "5433:5433"
+    command: [ "postgres", "-c", "listen_addresses=*", "-c", "port=5433" ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user -p 5433"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  catalogmicroservice:
+    image: gordito/catalog-microservice
+    depends_on:
+      catalogpostgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://catalogpostgres:5433/catalog
+      SPRING_DATASOURCE_USERNAME: admin_user
+      SPRING_DATASOURCE_PASSWORD: strongPassword
+      CONF_JWK_URL: http://usermicroservice:8080/public_key
+    ports:
+      - "8081:8081"
+    networks:
+      - app-network
 
 networks:
-  my-network:
+  app-network:
     driver: bridge
