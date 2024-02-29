@@ -18,7 +18,7 @@ services:
       - app-network
 
   usermicroservice:
-    build: .
+    image: gordito/user-microservice
     depends_on:
       authpostgres:
         condition: service_healthy
@@ -62,6 +62,74 @@ services:
       CONF_JWK_URL: http://usermicroservice:8080/public_key
     ports:
       - "8081:8081"
+    networks:
+      - app-network
+
+  paymentpostgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: strongPassword
+      POSTGRES_USER: admin_user
+      POSTGRES_DB: payment
+    ports:
+      - "5434:5434"
+    command: [ "postgres", "-c", "listen_addresses=*", "-c", "port=5434" ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user -p 5434"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+
+  paymentmicroservice:
+    image: gordito/payment-microservice
+    depends_on:
+      paymentpostgres :
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      SPRING_DATASOURCE_URL: jdbc:postgresql://paymentpostgres:5434/payment
+      SPRING_DATASOURCE_USERNAME: admin_user
+      SPRING_DATASOURCE_PASSWORD: strongPassword
+      SERVER_PORT: 8082
+      CONF_JWK_URL: http://usermicroservice:8080/public_key
+      RABBITMQ_EXCHANGE: paymentServiceExchange
+      RABBITMQ_ROUTINGKEY: payment.#
+      APP_QUEUE_NAME: processedPaymentQueue
+    ports:
+      - "8082:8082"
+    networks:
+      - app-network
+
+  paymentservicemockup:
+    image: gordito/payment-service-mockup
+    depends_on:
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      SERVER_PORT: 8083
+      RABBITMQ_EXCHANGE: paymentProcessedServiceExchange
+      RABBITMQ_ROUTINGKEY: payment.#
+      APP_QUEUE_NAME: paymentProcessingQueue
+    ports:
+      - "8083:8083"
     networks:
       - app-network
 
