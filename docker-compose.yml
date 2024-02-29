@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: userdb
     ports:
       - "5432:5432"
+    command: [ "postgres", "-c", "listen_addresses=*", "-c", "port=5432" ]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin_user"]
       interval: 3s
@@ -25,11 +26,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://authpostgres:5432/userdb
       SPRING_DATASOURCE_USERNAME: admin_user
       SPRING_DATASOURCE_PASSWORD: strongPassword
+      SERVER_PORT: 8080
     ports:
       - "8080:8080"
     networks:
       - app-network
-    command: [ "dockerize", "-wait", "tcp://authpostgres:5432", "-timeout", "30s", "java", "-jar", "/app.jar" ]
 
   catalogpostgres:
     image: postgres
@@ -57,6 +58,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://catalogpostgres:5433/catalog
       SPRING_DATASOURCE_USERNAME: admin_user
       SPRING_DATASOURCE_PASSWORD: strongPassword
+      SERVER_PORT: 8081
       CONF_JWK_URL: http://usermicroservice:8080/public_key
     ports:
       - "8081:8081"
