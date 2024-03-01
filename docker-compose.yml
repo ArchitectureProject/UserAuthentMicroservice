@@ -133,6 +133,53 @@ services:
     networks:
       - app-network
 
+  orderpostgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: strongPassword
+      POSTGRES_USER: admin_user
+      POSTGRES_DB: orders
+    ports:
+      - "5435:5435"
+    command: [ "postgres", "-c", "listen_addresses=*", "-c", "port=5435" ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user -p 5435"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  ordermicroservice:
+    image: gordito/order-microservice
+    depends_on:
+      orderpostgres:
+        condition: service_healthy
+      catalogpostgres:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://orderpostgres:5435/orders
+      SPRING_DATASOURCE_USERNAME: admin_user
+      SPRING_DATASOURCE_PASSWORD: strongPassword
+      SERVER_PORT: 8084
+      CONF_JWK_URL: http://usermicroservice:8080/public_key
+      CONF_CATALOG_MICROSERVICE_BASE_URL: http://catalogmicroservice:8081
+    ports:
+      - "8084:8084"
+    networks:
+      - app-network
+
+  mailsendermicroservice:
+    image: gordito/email-microservice
+    environment:
+      MAIL_PASSWORD: szul gbyq uyau nbcb
+      SERVER_PORT: 8085
+      CONF_JWK_URL: http://usermicroservice:8080/public_key
+    ports:
+      - "8085:8085"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
