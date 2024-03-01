@@ -9,7 +9,7 @@ import com.efrei.usermicroservice.utils.JWTUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+//simple comment
 @RestController
 public class UserController {
     UserServiceImpl userService;
